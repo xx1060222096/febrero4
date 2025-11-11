@@ -1,0 +1,29 @@
+name: Deploy to OVH via FTP
+
+on:
+  push:
+    branches: [ main ]       # 如果你的默认分支是 master，就改成 master
+  workflow_dispatch:          # 允许手动触发
+
+jobs:
+  ftp-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to OVH /www/
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./           # 上传当前仓库内容
+          server-dir: /www/       # OVH 网站根目录
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/node_modules/**
+            **/.DS_Store
+            **/*.map
