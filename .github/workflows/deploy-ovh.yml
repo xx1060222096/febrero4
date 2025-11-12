@@ -1,49 +1,30 @@
-name: Deploy to OVH (lftp direct to /www)
-
-on:
-  push:
-    branches: [ main ]      # 如果你的默认分支是 master，就改成 master
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
-
-      - name: Deploy via lftp (mirror to /www)
-        env:
-          FTP_SERVER:   ${{ secrets.FTP_SERVER }}
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-        run: |
-          # 不使用 set -e，避免单条命令非零直接让job失败
-          cat > deploy.lftp <<'LFTP'
-          set net:max-retries 2
-          set net:timeout 30
-          set ftp:passive-mode on
-          set ftp:ssl-force true
-          set ftp:ssl-protect-data true
-          set ssl:verify-certificate no      # 避免证书校验问题导致非0
-          open -u ${FTP_USERNAME},${FTP_PASSWORD} ${FTP_SERVER}
-          pwd
-          # 列出根目录，确认可访问
-          cls -l || true
-          # 直接把当前仓库镜像到远端 /www 目录（不cd）
-          mirror -R \
-            --only-newer \
-            --parallel=1 \
-            --verbose \
-            --exclude-glob .git* \
-            --exclude-glob .github/** \
-            --exclude-glob node_modules/** \
-            --exclude-glob "*.map" \
-            ./ /www
-          bye
-          LFTP
-          # 开启调试输出，便于排查
-          lftp -d -f deploy.lftp
+- name: Deploy via lftp (mirror to /www)
+  env:
+    FTP_SERVER:   ${{ secrets.FTP_SERVER }}
+    FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+    FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+  run: |
+    sudo apt-get update && sudo apt-get install -y lftp
+    # 注意：这里不用引号，让 ${...} 在 shell 中展开
+    cat > deploy.lftp <<LFTP
+    set net:max-retries 2
+    set net:timeout 30
+    set ftp:passive-mode on
+    set ftp:ssl-force true
+    set ftp:ssl-protect-data true
+    set ssl:verify-certificate no
+    open -u ${FTP_USERNAME},${FTP_PASSWORD} ${FTP_SERVER}
+    pwd
+    cls -l || true
+    mirror -R \
+      --only-newer \
+      --parallel=1 \
+      --verbose \
+      --exclude-glob .git* \
+      --exclude-glob .github/** \
+      --exclude-glob node_modules/** \
+      --exclude-glob "*.map" \
+      ./ /www
+    bye
+    LFTP
+    lftp -d -f deploy.lftp
