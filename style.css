@@ -4,7 +4,7 @@ html,body{ margin:0; height:100%; font-family:system-ui,-apple-system,Segoe UI,R
 body{ position:relative; background:#000; color:#111; overflow-x:hidden; }
 body::before{
   content:""; position:absolute; inset:0;
-  background:url("imagine/background.png") center/cover no-repeat;
+  background:url("/imagine/background.png") center/cover no-repeat;
   opacity:.35; z-index:-1;
 }
 
