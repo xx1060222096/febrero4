@@ -1,9 +1,9 @@
-name: Deploy to OVH (lftp direct to /www)
+name: Deploy to OVH (plain FTP)
 
 on:
   push:
-    branches: [ main ]      # 若默认分支不是 main，请改成 master
-  workflow_dispatch:        # 允许你在 Actions 页面手动触发
+    branches: [ main ]      # 如果默认分支是 master，请改成 master
+  workflow_dispatch:        # 允许在 Actions 页面手动运行
 
 jobs:
   deploy:
@@ -21,18 +21,17 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          # 写入部署脚本（注意不加引号）
+          # 写入部署脚本（无引号，让变量展开）
           cat > deploy.lftp <<LFTP
           set net:max-retries 2
           set net:timeout 30
           set ftp:passive-mode on
-          set ftp:ssl-force true
-          set ftp:ssl-protect-data true
+          set ftp:ssl-force false           # 禁用 SSL/TLS（OVH 默认不支持）
+          set ftp:ssl-protect-data false
           set ssl:verify-certificate no
           open -u ${FTP_USERNAME},${FTP_PASSWORD} ${FTP_SERVER}
           pwd
           cls -l || true
-          # 上传当前仓库内容到 OVH 的 /www 目录
           mirror -R \
             --only-newer \
             --parallel=1 \
@@ -44,5 +43,6 @@ jobs:
             ./ /www
           bye
           LFTP
-          # 执行部署并输出调试日志
+
+          # 执行上传并打印详细日志
           lftp -d -f deploy.lftp
